@@ -1,0 +1,54 @@
+---
+- name: Install imagemagick
+  apt: pkg={{ item }} state=installed
+  with_items:
+    - imagemagick
+    - libmagickcore-dev
+    - libmagickwand-dev
+    - advancecomp 
+    - gifsicle
+    - jpegoptim
+    - libjpeg-progs
+    - optipng
+    - pngcrush
+
+- name: Create necessary directories
+  file: dest=/home/{{ user }}/projects/{{ app_name }}{{ item }} owner={{ user }} state=directory recurse=yes
+  with_items:
+    - "/"
+    - "/shared/log"
+    - "/shared/tmp/pids"
+    - "/shared/tmp/sockets"
+    - "/shared/config"
+  sudo: true
+  sudo_user: "{{ user }}"
+
+- name: Create database.yml for application
+  template: "src=database.yml.j2 dest=/home/{{ user }}/projects/{{ app_name }}/shared/config/database.yml owner={{ user }}"
+
+- name: Create unicorn.rb for application
+  template: "src=unicorn.rb.j2 dest=/home/{{ user }}/projects/{{ app_name }}/shared/config/{{ app_name }}.rb owner={{ user }}"
+
+- name: Create init script for application
+  sudo: true
+  template: "src=unicorn_init_script.j2 dest=/etc/init.d/{{ app_name }} force=yes mode=755 owner={{ user }}"
+
+- name: Create the postgresql user for application
+  postgresql_user: name={{ db_user }} state=present role_attr_flags=SUPERUSER
+  sudo_user: postgres
+  sudo: true
+
+- name: Create the postgresql database for application
+  postgresql_db: name={{ db_name }} owner={{ db_user }} state=present
+  sudo_user: postgres
+  sudo: true
+
+- name: Configure nginx for the app
+  template: src=nginx_rails.conf.j2 dest=/etc/nginx/sites-enabled/{{ app_name }} owner=root group=root
+  notify: 
+    - restart nginx
+
+- name: Configure monit for unicorn
+  template: src=monit_unicorn.conf.j2 dest=/etc/monit/conf.d/{{ app_name }} owner=root group=root
+  notify: 
+    - restart monit

@@ -1,0 +1,53 @@
+upstream {{ app_name }} {
+  server unix:///home/{{ user }}/projects/{{ app_name }}/shared/tmp/sockets/{{ app_name }}.sock fail_timeout=0;
+}
+
+server {
+  server_name  www.{{ fqdn }};
+  return 301 $scheme://{{ fqdn }}$request_uri;
+}
+
+server {
+  listen 80;
+  server_name {{ fqdn }};
+  root /home/{{ user }}/projects/{{ app_name }}/current/public;
+
+  gzip on;
+  gzip_vary on;
+
+  location ^~ /assets/ {
+    gzip_static on;
+    expires max;
+    add_header Cache-Control public;
+    add_header  Last-Modified "";
+    add_header  ETag "";
+  }
+
+  location ^~ /uploads/ {
+    expires 24h;
+    add_header Cache-Control public;
+  }
+  
+  proxy_set_header  X-Sendfile-Type  X-Accel-Redirect;
+  proxy_set_header  X-Accel-Mapping  /home/{{ user }}/projects/{{ app_name }}/current/store/=/store/;
+
+  location ~ /store/(.*) {
+    internal;
+    alias /home/{{ user }}/projects/{{ app_name }}/current/store/$1;
+  }
+
+  try_files $uri/index.html $uri @{{ app_name }};
+
+  location @{{ app_name }} {
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $http_host;
+    proxy_redirect off;
+    proxy_pass http://{{ app_name }};
+  }
+
+  error_page 500 502 503 504 /500.html;
+  error_page 404 /404.html;
+  client_max_body_size 4G;
+  keepalive_timeout 10;
+  
+}
