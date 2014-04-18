@@ -15,4 +15,4 @@ galaxy_info:
         - wheezy
   categories:
     - rails
-dependencies: []
+dependencies: ["nginx", "monit"]
