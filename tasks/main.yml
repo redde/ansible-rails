@@ -5,7 +5,7 @@
     - imagemagick
     - libmagickcore-dev
     - libmagickwand-dev
-    - advancecomp 
+    - advancecomp
     - gifsicle
     - jpegoptim
     - libjpeg-progs
@@ -45,10 +45,18 @@
 
 - name: Configure nginx for the app
   template: src=nginx_rails.conf.j2 dest=/etc/nginx/sites-enabled/{{ app_name }} owner=root group=root
-  notify: 
+  notify:
     - restart nginx
 
 - name: Configure monit for unicorn
   template: src=monit_unicorn.conf.j2 dest=/etc/monit/conf.d/{{ app_name }} owner=root group=root
-  notify: 
+  notify:
     - restart monit
+
+- name: Setup logrotate for rails logs
+  template:
+    src: logrotate.j2
+    dest: "/etc/logrotate.d/{{ app_name }}"
+    owner: root
+    group: root
+

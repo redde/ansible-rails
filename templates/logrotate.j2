@@ -1,0 +1,9 @@
+/home/{{ user }}/project/{{ app_name }}/shared/log/*.log {
+    weekly
+    missingok
+    rotate 52
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
